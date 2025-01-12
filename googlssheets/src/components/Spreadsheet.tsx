@@ -1,29 +1,37 @@
 import React, { useState } from "react";
+// import Chart from "chart.js/auto";
 
 const Spreadsheet = () => {
   const rows = 20;
   const columns = 10;
 
-  // State to store cell data
   const [gridData, setGridData] = useState(
     Array.from({ length: rows }, () =>
       Array.from({ length: columns }, () => "")
     )
   );
 
-  // Handle cell input changes
-  const handleInputChange = (rowIndex: number, colIndex: number, value: string) => {
+  // const chartRef = useRef<HTMLCanvasElement | null>(null);
+  // const chartInstance = useRef<Chart | null>(null);
+
+  const handleInputChange = (
+    rowIndex: number,
+    colIndex: number,
+    value: string
+  ) => {
     const updatedData = gridData.map((row, i) =>
       i === rowIndex
         ? row.map((cell, j) => (j === colIndex ? value : cell))
         : row
     );
-
     setGridData(updatedData);
   };
 
-  // Handle formula evaluation on Enter
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    colIndex: number
+  ) => {
     if (event.key === "Enter") {
       const value = gridData[rowIndex][colIndex];
 
@@ -39,15 +47,32 @@ const Spreadsheet = () => {
     }
   };
 
-  // Function to evaluate formulas
   const evaluateFormula = (formula: string): string => {
     try {
       if (formula.startsWith("=")) {
-        const command = formula.slice(1).toUpperCase(); // Remove "=" and convert to uppercase
-        if (command.startsWith("SUM")) {
-          const range = command.match(/\((.*)\)/)?.[1]; // Extract range inside parentheses
-          if (range) {
-            return calculateSum(range).toString();
+        const command = formula.slice(1).toUpperCase();
+        const match = command.match(/(\w+)\((.*)\)/);
+
+        if (match) {
+          const operation = match[1];
+          const args = match[2];
+
+          switch (operation) {
+            case "SUM":
+            case "AVERAGE":
+            case "MAX":
+            case "MIN":
+              return calculateRangeFormula(args, operation).toString();
+            case "IF":
+              return calculateIfFormula(args);
+            case "UPPER":
+              return upperCell(args);
+            case "LOWER":
+              return lowerCell(args);
+            case "TRIM":
+              return trimCell(args);
+            default:
+              return "Invalid Function";
           }
         }
       }
@@ -58,38 +83,100 @@ const Spreadsheet = () => {
     }
   };
 
-  // Function to calculate the sum of individual cells or a range
-  const calculateSum = (range: string): number => {
-    const cells = range.split(",").map((cell) => cell.trim()); // Split by commas and trim spaces
-    let sum = 0;
+  const calculateRangeFormula = (range: string, operation: string): number => {
+    const [startCell, endCell] = range.split(":").map((cell) => cell.trim());
+    const [startCol, startRow] = parseCell(startCell);
+    const [endCol, endRow] = parseCell(endCell);
 
-    cells.forEach((cell) => {
-      const col = cell.charCodeAt(0) - 65; // Column letter to index
-      const row = parseInt(cell.slice(1), 10) - 1; // Row number to index
-
-      if (gridData[row] && gridData[row][col]) {
-        const cellValue = parseFloat(gridData[row][col]);
+    const values: number[] = [];
+    for (let row = startRow; row <= endRow; row++) {
+      for (let col = startCol; col <= endCol; col++) {
+        const cellValue = parseFloat(gridData[row]?.[col] || "0");
         if (!isNaN(cellValue)) {
-          sum += cellValue;
+          values.push(cellValue);
         }
       }
-    });
+    }
 
-    return sum;
+    switch (operation) {
+      case "SUM":
+        return values.reduce((acc, val) => acc + val, 0);
+      case "AVERAGE":
+        return values.length
+          ? values.reduce((acc, val) => acc + val, 0) / values.length
+          : 0;
+      case "MAX":
+        return Math.max(...values);
+      case "MIN":
+        return Math.min(...values);
+      default:
+        return 0;
+    }
+  };
+
+  const calculateIfFormula = (args: string): string => {
+    const [condition, trueValue, falseValue] = args
+      .split(",")
+      .map((arg) => arg.trim());
+    const match = condition.match(/(\w+)([<>=!]+)(.+)/);
+
+    if (match) {
+      const [_, cell, operator, value] = match;
+      const [col, row] = parseCell(cell);
+      const cellValue = parseFloat(gridData[row]?.[col] || "0");
+      const targetValue = parseFloat(value);
+
+      switch (operator) {
+        case ">":
+          return cellValue > targetValue ? trueValue : falseValue;
+        case "<":
+          return cellValue < targetValue ? trueValue : falseValue;
+        case ">=":
+          return cellValue >= targetValue ? trueValue : falseValue;
+        case "<=":
+          return cellValue <= targetValue ? trueValue : falseValue;
+        case "==":
+          return cellValue === targetValue ? trueValue : falseValue;
+        case "!=":
+          return cellValue !== targetValue ? trueValue : falseValue;
+        default:
+          return falseValue;
+      }
+    }
+    return falseValue;
+  };
+
+  const trimCell = (cell: string): string => {
+    const [col, row] = parseCell(cell);
+    return gridData[row][col].trim();
+  };
+
+  const upperCell = (cell: string): string => {
+    const [col, row] = parseCell(cell);
+    return gridData[row][col].toUpperCase();
+  };
+
+  const lowerCell = (cell: string): string => {
+    const [col, row] = parseCell(cell);
+    return gridData[row][col].toLowerCase();
+  };
+
+  const parseCell = (cell: string): [number, number] => {
+    const col = cell.charCodeAt(0) - 65;
+    const row = parseInt(cell.slice(1), 10) - 1;
+    return [col, row];
   };
 
   return (
     <div className="spreadsheet">
-      {/* Column Headers */}
       <div className="row header">
-        <div className="cell-header corner"></div> {/* Empty corner cell */}
+        <div className="cell-header corner"></div>
         {Array.from({ length: columns }).map((_, colIndex) => (
           <div key={colIndex} className="cell-header column-header">
-            {String.fromCharCode(65 + colIndex)} {/* Column letters (A, B, C...) */}
+            {String.fromCharCode(65 + colIndex)}
           </div>
         ))}
       </div>
-      {/* Data Rows */}
       {gridData.map((row, rowIndex) => (
         <div key={rowIndex} className="row">
           <div className="cell-header row-header">{rowIndex + 1}</div>

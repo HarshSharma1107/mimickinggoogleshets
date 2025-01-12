@@ -1,4 +1,3 @@
-// hooks/useDataValidation.ts
 import {
   trim,
   upper,
@@ -11,7 +10,8 @@ import { DataQualityFunction } from "../type";
 export const useDataValidation = () => {
   const applyDataValidation = (
     value: string,
-    func: DataQualityFunction
+    func: DataQualityFunction,
+    options?: { find?: string; replace?: string } // Options for FIND_AND_REPLACE
   ): string => {
     switch (func) {
       case "TRIM":
@@ -21,9 +21,13 @@ export const useDataValidation = () => {
       case "LOWER":
         return lower(value);
       case "REMOVE_DUPLICATES":
-        return removeDuplicates(value.split(",")).join(",");
+        return removeDuplicates(value.split(",")).join(","); // Ensure input is split into an array
       case "FIND_AND_REPLACE":
-        return findAndReplace(value, "find", "replace"); // Example
+        if (options?.find && options?.replace) {
+          return findAndReplace(value, options.find, options.replace);
+        }
+        console.warn("FIND_AND_REPLACE requires 'find' and 'replace' options");
+        return value;
       default:
         return value;
     }
