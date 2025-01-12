@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-// import Chart from "chart.js/auto";
+import FormulaBar from "./FormulaBar";
 
 const Spreadsheet = () => {
   const rows = 20;
@@ -10,10 +10,10 @@ const Spreadsheet = () => {
       Array.from({ length: columns }, () => "")
     )
   );
+  const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
+  const [formulaInput, setFormulaInput] = useState("");
 
-  // const chartRef = useRef<HTMLCanvasElement | null>(null);
-  // const chartInstance = useRef<Chart | null>(null);
-
+  // Update the cell value in the grid
   const handleInputChange = (
     rowIndex: number,
     colIndex: number,
@@ -27,26 +27,32 @@ const Spreadsheet = () => {
     setGridData(updatedData);
   };
 
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-    rowIndex: number,
-    colIndex: number
-  ) => {
-    if (event.key === "Enter") {
-      const value = gridData[rowIndex][colIndex];
+  // Handle FormulaBar input change
+  const handleFormulaBarChange = (value: string) => {
+    setFormulaInput(value);
+    const { row, col } = selectedCell;
+    handleInputChange(row, col, value);
+  };
 
-      if (value.startsWith("=")) {
-        const result = evaluateFormula(value);
-        const updatedData = gridData.map((row, i) =>
-          i === rowIndex
-            ? row.map((cell, j) => (j === colIndex ? result : cell))
-            : row
-        );
-        setGridData(updatedData);
-      }
+  // Handle Enter key in the FormulaBar
+  const handleFormulaBarEnter = () => {
+    const { row, col } = selectedCell;
+    if (formulaInput.startsWith("=")) {
+      const result = evaluateFormula(formulaInput);
+      handleInputChange(row, col, result);
     }
   };
 
+  // Apply formula logic when editing cells directly
+  const applyFormula = (rowIndex: number, colIndex: number) => {
+    const value = gridData[rowIndex][colIndex];
+    if (value.startsWith("=")) {
+      const result = evaluateFormula(value);
+      handleInputChange(rowIndex, colIndex, result);
+    }
+  };
+
+  // Evaluate formulas
   const evaluateFormula = (formula: string): string => {
     try {
       if (formula.startsWith("=")) {
@@ -65,6 +71,8 @@ const Spreadsheet = () => {
               return calculateRangeFormula(args, operation).toString();
             case "IF":
               return calculateIfFormula(args);
+            case "FILTER":
+              return calculateFilterFormula(args);
             case "UPPER":
               return upperCell(args);
             case "LOWER":
@@ -83,20 +91,18 @@ const Spreadsheet = () => {
     }
   };
 
-  const calculateRangeFormula = (range: string, operation: string): number => {
-    const [startCell, endCell] = range.split(":").map((cell) => cell.trim());
-    const [startCol, startRow] = parseCell(startCell);
-    const [endCol, endRow] = parseCell(endCell);
-
+  // Range formulas: SUM, AVERAGE, MAX, MIN
+  const calculateRangeFormula = (args: string, operation: string): number => {
+    const cells = args.split(",").map((cell) => cell.trim());
     const values: number[] = [];
-    for (let row = startRow; row <= endRow; row++) {
-      for (let col = startCol; col <= endCol; col++) {
-        const cellValue = parseFloat(gridData[row]?.[col] || "0");
-        if (!isNaN(cellValue)) {
-          values.push(cellValue);
-        }
+
+    cells.forEach((cell) => {
+      const [col, row] = parseCell(cell);
+      const cellValue = parseFloat(gridData[row]?.[col] || "0");
+      if (!isNaN(cellValue)) {
+        values.push(cellValue);
       }
-    }
+    });
 
     switch (operation) {
       case "SUM":
@@ -114,6 +120,7 @@ const Spreadsheet = () => {
     }
   };
 
+  // IF Formula
   const calculateIfFormula = (args: string): string => {
     const [condition, trueValue, falseValue] = args
       .split(",")
@@ -143,7 +150,60 @@ const Spreadsheet = () => {
           return falseValue;
       }
     }
-    return falseValue;
+    return "Invalid Condition";
+  };
+
+  // FILTER Formula
+  const calculateFilterFormula = (args: string): string => {
+    const [rangeArg, conditionArg] = args.split(",").map((arg) => arg.trim());
+    const cells = rangeArg.split(":").map((cell) => cell.trim());
+    const [startCell, endCell] = cells;
+    const [startCol, startRow] = parseCell(startCell);
+    const [endCol, endRow] = parseCell(endCell);
+
+    const conditionMatch = conditionArg.match(/(\w+)([<>=!]+)(.+)/);
+
+    if (!conditionMatch) return "Invalid FILTER Condition";
+
+    const [_, conditionCell, operator, conditionValue] = conditionMatch;
+    const targetValue = parseFloat(conditionValue);
+
+    const filteredValues: number[] = [];
+
+    for (let row = startRow; row <= endRow; row++) {
+      for (let col = startCol; col <= endCol; col++) {
+        const cellValue = parseFloat(gridData[row]?.[col] || "0");
+        let conditionMet = false;
+        switch (operator) {
+          case ">":
+            conditionMet = cellValue > targetValue;
+            break;
+          case "<":
+            conditionMet = cellValue < targetValue;
+            break;
+          case ">=":
+            conditionMet = cellValue >= targetValue;
+            break;
+          case "<=":
+            conditionMet = cellValue <= targetValue;
+            break;
+          case "==":
+            conditionMet = cellValue === targetValue;
+            break;
+          case "!=":
+            conditionMet = cellValue !== targetValue;
+            break;
+          default:
+            return "Invalid FILTER Operator";
+        }
+
+        if (conditionMet) {
+          filteredValues.push(cellValue);
+        }
+      }
+    }
+
+    return filteredValues.join(", ");
   };
 
   const trimCell = (cell: string): string => {
@@ -167,33 +227,63 @@ const Spreadsheet = () => {
     return [col, row];
   };
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    if (e.key === "Enter") {
+      applyFormula(rowIndex, colIndex);
+    }
+  };
+
   return (
-    <div className="spreadsheet">
-      <div className="row header">
-        <div className="cell-header corner"></div>
-        {Array.from({ length: columns }).map((_, colIndex) => (
-          <div key={colIndex} className="cell-header column-header">
-            {String.fromCharCode(65 + colIndex)}
-          </div>
-        ))}
-      </div>
-      {gridData.map((row, rowIndex) => (
-        <div key={rowIndex} className="row">
-          <div className="cell-header row-header">{rowIndex + 1}</div>
-          {row.map((cellValue, colIndex) => (
-            <div key={colIndex} className="cell">
-              <input
-                type="text"
-                value={cellValue}
-                onChange={(e) =>
-                  handleInputChange(rowIndex, colIndex, e.target.value)
-                }
-                onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-              />
+    <div className="spreadsheet-container">
+      <FormulaBar
+        value={formulaInput}
+        onChange={handleFormulaBarChange}
+        onEnter={handleFormulaBarEnter}
+        cell={`${String.fromCharCode(65 + selectedCell.col)}${
+          selectedCell.row + 1
+        }`}
+      />
+      <div className="spreadsheet">
+        <div className="row header">
+          <div className="cell-header corner"></div>
+          {Array.from({ length: columns }).map((_, colIndex) => (
+            <div key={colIndex} className="cell-header column-header">
+              {String.fromCharCode(65 + colIndex)}
             </div>
           ))}
         </div>
-      ))}
+        {gridData.map((row, rowIndex) => (
+          <div key={rowIndex} className="row">
+            <div className="cell-header row-header">{rowIndex + 1}</div>
+            {row.map((cellValue, colIndex) => (
+              <div
+                key={colIndex}
+                className={`cell ${
+                  selectedCell.row === rowIndex && selectedCell.col === colIndex
+                    ? "selected"
+                    : ""
+                }`}
+                onClick={() =>
+                  setSelectedCell({ row: rowIndex, col: colIndex })
+                }
+              >
+                <input
+                  type="text"
+                  value={cellValue}
+                  onChange={(e) =>
+                    handleInputChange(rowIndex, colIndex, e.target.value)
+                  }
+                  onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
