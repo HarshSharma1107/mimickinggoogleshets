@@ -18,7 +18,64 @@ const Spreadsheet = () => {
         ? row.map((cell, j) => (j === colIndex ? value : cell))
         : row
     );
+
     setGridData(updatedData);
+  };
+
+  // Handle formula evaluation on Enter
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
+    if (event.key === "Enter") {
+      const value = gridData[rowIndex][colIndex];
+
+      if (value.startsWith("=")) {
+        const result = evaluateFormula(value);
+        const updatedData = gridData.map((row, i) =>
+          i === rowIndex
+            ? row.map((cell, j) => (j === colIndex ? result : cell))
+            : row
+        );
+        setGridData(updatedData);
+      }
+    }
+  };
+
+  // Function to evaluate formulas
+  const evaluateFormula = (formula: string): string => {
+    try {
+      if (formula.startsWith("=")) {
+        const command = formula.slice(1).toUpperCase(); // Remove "=" and convert to uppercase
+        if (command.startsWith("SUM")) {
+          const range = command.match(/\((.*)\)/)?.[1]; // Extract range inside parentheses
+          if (range) {
+            return calculateSum(range).toString();
+          }
+        }
+      }
+      return "Invalid Formula";
+    } catch (error) {
+      console.error("Formula evaluation error:", error);
+      return "Error";
+    }
+  };
+
+  // Function to calculate the sum of individual cells or a range
+  const calculateSum = (range: string): number => {
+    const cells = range.split(",").map((cell) => cell.trim()); // Split by commas and trim spaces
+    let sum = 0;
+
+    cells.forEach((cell) => {
+      const col = cell.charCodeAt(0) - 65; // Column letter to index
+      const row = parseInt(cell.slice(1), 10) - 1; // Row number to index
+
+      if (gridData[row] && gridData[row][col]) {
+        const cellValue = parseFloat(gridData[row][col]);
+        if (!isNaN(cellValue)) {
+          sum += cellValue;
+        }
+      }
+    });
+
+    return sum;
   };
 
   return (
@@ -44,6 +101,7 @@ const Spreadsheet = () => {
                 onChange={(e) =>
                   handleInputChange(rowIndex, colIndex, e.target.value)
                 }
+                onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
               />
             </div>
           ))}
