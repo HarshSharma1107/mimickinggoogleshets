@@ -73,26 +73,44 @@ body {
   display: flex;
   flex-direction: column;
   overflow: auto;
+  background-color: #fff;
 }
 
-.row {
+/* Row and Column Headers */
+.row.header {
   display: grid;
-  grid-template-columns: 50px repeat(10, 1fr); /* 10 columns */
-}
-
-.header {
-  background-color: #f8f9fa;
+  grid-template-columns: 50px repeat(10, 1fr); /* Row header + 10 columns */
+  background-color: #e8eaed; /* Light gray for column headers */
 }
 
 .cell-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fa;
   font-weight: bold;
   font-size: 14px;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  border: 1px solid #e0e0e0;
+  color: #202124; /* Ensure text color is dark */
+  background-color: #e8eaed; /* Light gray for headers */
+}
+
+.cell-header.corner {
+  background-color: #d0d4d9; /* Slightly darker for the top-left corner */
+}
+
+/* Row Header Styling */
+.row .cell-header {
+  background-color: #e8eaed;
+  font-weight: bold;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  color: #202124;
+}
+
+/* Data Cells */
+.row {
+  display: grid;
+  grid-template-columns: 50px repeat(10, 1fr); /* Row header + 10 columns */
 }
 
 .cell {
@@ -101,23 +119,34 @@ body {
   justify-content: flex-start;
   padding: 4px;
   font-size: 14px;
+  color: #000; /* Ensure text is visible */
   border-right: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
 }
 
-.cell:focus {
-  outline: 2px solid #1a73e8;
+.cell input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #000; /* Ensure text is visible */
+  background: transparent;
+}
+
+.cell input:focus {
+  border: 2px solid #1a73e8; /* Blue focus outline */
+  background-color: #e7f3ff; /* Light blue background on focus */
   z-index: 1;
 }
 
-.cell-header:first-child,
-.cell:first-child {
-  border-left: 1px solid #e0e0e0;
-}
-
-.row:first-child .cell-header,
-.row:first-child .cell {
-  border-top: 1px solid #e0e0e0;
+/* Invalid Input */
+.cell input.error {
+  border: 2px solid red;
+  background-color: #ffe6e6; /* Light red for error cells */
 }
 
 /* Scrollbars */
@@ -133,4 +162,15 @@ body {
 
 .spreadsheet::-webkit-scrollbar-thumb:hover {
   background-color: #a1a1a1;
+}
+
+/* Hover Effects */
+.cell-header:hover {
+  background-color: #d7e3fc; /* Light blue when hovered */
+  cursor: pointer;
+}
+
+.row .cell-header:hover {
+  background-color: #d7e3fc;
+  cursor: default;
 }
