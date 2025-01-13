@@ -1,5 +1,3 @@
-// components/Row.tsx
-import React from 'react';
 import { Cell } from '../type';
 import Column from './Column';
 

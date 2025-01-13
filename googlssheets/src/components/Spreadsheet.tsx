@@ -13,7 +13,7 @@ const Spreadsheet = () => {
   const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
   const [formulaInput, setFormulaInput] = useState("");
 
-  // Update the cell value in the grid
+  //THis is  Update the cell value in the grid
   const handleInputChange = (
     rowIndex: number,
     colIndex: number,
@@ -27,14 +27,14 @@ const Spreadsheet = () => {
     setGridData(updatedData);
   };
 
-  // Handle FormulaBar input change
+  // thiss code Handle FormulaBar input change
   const handleFormulaBarChange = (value: string) => {
     setFormulaInput(value);
     const { row, col } = selectedCell;
     handleInputChange(row, col, value);
   };
 
-  // Handle Enter key in the FormulaBar
+  //here we Handle Enter key in the FormulaBar
   const handleFormulaBarEnter = () => {
     const { row, col } = selectedCell;
     if (formulaInput.startsWith("=")) {
@@ -52,7 +52,7 @@ const Spreadsheet = () => {
     }
   };
 
-  // Evaluate formulas
+  // Here we Evaluate formulas llike sum,mmin and etc.
   const evaluateFormula = (formula: string): string => {
     try {
       if (formula.startsWith("=")) {
@@ -119,7 +119,7 @@ const Spreadsheet = () => {
         return 0;
     }
   };
-
+//Bonus Functions
   // IF Formula
   const calculateIfFormula = (args: string): string => {
     const [condition, trueValue, falseValue] = args

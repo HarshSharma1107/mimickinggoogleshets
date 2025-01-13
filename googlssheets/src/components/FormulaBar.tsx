@@ -3,7 +3,7 @@ import React from "react";
 interface FormulaBarProps {
   value: string;
   onChange: (value: string) => void;
-  onEnter: () => void; // Add this prop
+  onEnter: () => void;
   cell: string;
 }
 
@@ -22,7 +22,7 @@ const FormulaBar: React.FC<FormulaBarProps> = ({ value, onChange, onEnter, cell 
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown} // Handle Enter key
+        onKeyDown={handleKeyDown}
         placeholder="Type your formula here"
       />
     </div>

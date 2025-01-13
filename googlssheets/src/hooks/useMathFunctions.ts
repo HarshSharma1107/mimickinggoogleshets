@@ -1,4 +1,3 @@
-// hooks/useMathFunctions.ts
 import { sum, average, max, min, count } from "../utils/mathFunctions";
 import { MathFunction } from "../type";
 
